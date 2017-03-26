@@ -31,7 +31,8 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: 'Neopixel simulator'
+      title: 'Neopixel simulator',
+      template: './src/index.html'
     })
   ]
 };
