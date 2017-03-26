@@ -7,11 +7,16 @@ const PIXELS = 20;
 const strip = new Neopixel(PIXELS);
 
 const arduino = new Arduino(
+
+    // This function is run once when the arduino starts
     function begin() {
       strip.begin();
       strip.show();
     },
 
+    // This function is run continuously
+    // Use the delay function to prevent it from burning cycles
+    // like crazy
     async function loop() {
       await chase(strip.Color(255, 0, 0)); // Red
       await chase(strip.Color(0, 255, 0)); // Green
@@ -19,6 +24,7 @@ const arduino = new Arduino(
     }
 );
 
+// Neopixel test pattern
 async function chase(c) {
   for (var i = 0; i < strip.numPixels() + 4; i++) {
     strip.setPixelColor(i, c); // Draw new pixel

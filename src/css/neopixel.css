@@ -3,6 +3,7 @@
     padding: 0;
     list-style: none;
     background: black;
+    display: inline-block;
 }
 
 .pixel {
