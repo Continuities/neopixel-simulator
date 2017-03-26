@@ -7,7 +7,10 @@
 
 import css from '../css/neopixel.css';
 
+const IndexPattern = /p-(\d+)/;
+
 const PIXELS = Symbol();
+const STRIP = Symbol();
 export default class Neopixel {
 
   /**
@@ -22,18 +25,32 @@ export default class Neopixel {
     }
   }
 
+  static fromElement(stripElement) {
+    const strip = new Neopixel(0);
+    strip[STRIP] = stripElement;
+    strip[PIXELS] = Array.prototype.map.call(stripElement.querySelectorAll('.pixel'), e => Pixel.fromElement(e))
+      .sort((a, b) => {
+        const ai = IndexPattern.exec(a.element.className)[1];
+        const bi = IndexPattern.exec(b.element.className)[1];
+        return ai - bi;
+      });
+    console.log(strip[PIXELS]);
+    return strip;
+  }
+
   /**
    * Renders the pixels to the page
    */
   begin() {
-    const strip = document.createElement('ul');
-
-    strip.className = 'pixel-strip';
-    this[PIXELS].forEach((pixel) => {
-      strip.appendChild(pixel.element);
-    });
-
-    document.body.appendChild(strip);
+    if (this[STRIP] == null) {
+      const strip = document.createElement('ul');
+      this[STRIP] = strip;
+      strip.className = 'pixel-strip';
+      this[PIXELS].forEach((pixel) => {
+        strip.appendChild(pixel.element);
+      });
+      document.body.appendChild(strip);
+    }
   }
 
   /**
@@ -87,11 +104,17 @@ class Color {
 
 class Pixel {
   constructor(index, colour) {
-    this.index = index;
     this.colour = colour;
     this.element = document.createElement('li');
     this.element.className = `pixel p-${index}`;
     this.updateColour();
+  }
+
+  static fromElement(element) {
+    const pixel = new Pixel(0, new Color(0, 0, 0));
+    pixel.element = element;
+    pixel.updateColour();
+    return pixel;
   }
 
   updateColour() {

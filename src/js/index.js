@@ -3,8 +3,8 @@
 import Arduino from './arduino';
 import Neopixel from './neopixel';
 
-const PIXELS = 20;
-const strip = new Neopixel(PIXELS);
+const PIXELS = 33;
+const strip = Neopixel.fromElement(document.querySelector('.custom-strip'));
 
 const arduino = new Arduino(
 
