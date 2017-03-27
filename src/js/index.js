@@ -4,7 +4,7 @@ import Arduino from './arduino';
 import Neopixel from './neopixel';
 
 const PIXELS = 10;
-const strip = new Neopixel(PIXELS);
+const strip = Neopixel.fromElement(document.querySelector('.custom-strip'));
 
 const arduino = new Arduino(
 
