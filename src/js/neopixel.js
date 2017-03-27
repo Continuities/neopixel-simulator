@@ -34,7 +34,6 @@ export default class Neopixel {
         const bi = IndexPattern.exec(b.element.className)[1];
         return ai - bi;
       });
-    console.log(strip[PIXELS]);
     return strip;
   }
 
