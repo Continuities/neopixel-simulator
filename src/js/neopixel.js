@@ -25,6 +25,11 @@ export default class Neopixel {
     }
   }
 
+  /**
+   * Creates a Neopixel strip from a pre-created DOM element
+   * @param stripElement The element containing the pixels
+   * @returns {Neopixel}
+   */
   static fromElement(stripElement) {
     const strip = new Neopixel(0);
     strip[STRIP] = stripElement;
