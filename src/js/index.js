@@ -68,7 +68,7 @@ const arduino = new Arduino(
           if ((x + y) % 2 == 0) {
             lights.push(new LightSource(
                 x, y,
-                new HSL(rand(0, 1), 1, 0.3),
+                new HSL(rand(0, 1), 1, 0.4),
                 roundLight,
                 twinkle
             ));
@@ -221,7 +221,7 @@ function roundLight(lightsource, buffer) {
 }
 
 function verticalLight(lightsource, buffer) {
-  const radius = 3;
+  const radius = 2;
   for (var x = -radius; x <= radius; x++) {
     for (var y = 0; y < ROWS; y++) {
       const i = index(Math.round(lightsource.x) + x, y);
