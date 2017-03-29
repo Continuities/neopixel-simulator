@@ -2,21 +2,54 @@
 
 import Arduino from './arduino';
 import Neopixel from './neopixel';
+import *  as Convert from './colour-conversion';
 
 const ROWS = 3;
 const COLS = 11;
+const FADE_FRAMES = 30;
+const FRAME_DELAY = 30;
 
 const strip = Neopixel.fromElement(document.querySelector('.custom-strip'));
 const lights = [];
+
+var currentColourBuffer;
+
+class HSL {
+  constructor(hue, saturation, luminosity) {
+    this.hue = hue;
+    this.saturation = saturation;
+    this.luminosity = luminosity;
+  }
+
+  toRGB() {
+    const rgb = Convert.hslToRgb(this.hue, this.saturation, this.luminosity);
+    return new RGB(rgb[0], rgb[1], rgb[2]);
+  }
+}
+
+class RGB {
+  constructor(red, green, blue) {
+    this.red = red;
+    this.green = green;
+    this.blue = blue;
+  }
+
+  toHSL() {
+    const hsl = Convert.rgbToHsl(this.red, this.green, this.blue);
+    return new HSL(hsl[0], hsl[1], hsl[2]);
+  }
+}
 
 const arduino = new Arduino(
 
     // This function is run once when the arduino starts
     function begin() {
 
-      for (var n = 0; n < 10; n++) {
+      for (var n = 0; n < 4; n++) {
         lights.push(randomLight());
       }
+
+      currentColourBuffer = ColourBuffer(strip.numPixels());
 
       strip.begin();
       strip.show();
@@ -26,26 +59,51 @@ const arduino = new Arduino(
     // Use the delay function to prevent it from burning cycles
     // like crazy
     async function loop() {
+
+      // Calculate the lighting for the next frame
       const colours = ColourBuffer(strip.numPixels());
       for (var l = 0; l < lights.length; l++) {
         moveLight(lights[l]);
         lights[l].lightFunc(lights[l], colours);
       }
 
-      for (var i = 0; i < colours.length; i++) {
-        strip.setPixelColor(i, colours[i]);
-      }
-      strip.show();
-      await arduino.delay(100);
+      // Crossfade between the current and next frames
+      currentColourBuffer = await fade(currentColourBuffer, colours);
+
+      // Pause before the next frame
+      await arduino.delay(FRAME_DELAY);
     }
 );
 
 function ColourBuffer(x) {
   const buffer = [];
   for (var i = 0; i < x; i++) {
-    buffer.push(strip.Color(0, 0, 0));
+    buffer.push(new HSL(0, 0, 0));
   }
   return buffer;
+}
+
+// Fades the pixels between two buffers
+// Returns the final buffer when complete
+async function fade(from, to) {
+  var c;
+  for (var frame = 0; frame < FADE_FRAMES; frame++) {
+    for (var i = 0; i < from.length; i++) {
+      c = transRGBColour(from[i].toRGB(), to[i].toRGB(), frame)
+      strip.setPixelColor(i, strip.Color(c.red, c.blue, c.green));
+    }
+    strip.show();
+    await arduino.delay(FRAME_DELAY);
+  }
+  return to;
+}
+
+function transRGBColour(from, to, frame) {
+  return new RGB(
+      from.red + Math.round(((to.red - from.red) / FADE_FRAMES) * frame),
+      from.green + Math.round(((to.green - from.green) / FADE_FRAMES) * frame),
+      from.blue + Math.round(((to.blue - from.blue) / FADE_FRAMES) * frame)
+  );
 }
 
 // Transforms a cartesian coordinate into a pixel index
@@ -58,21 +116,21 @@ function index(x, y) {
   return (x * 3) + (x % 2 > 0 ? 2 - y : y);
 }
 
-// Adds two colours
-function add(c1, c2) {
-  return strip.Color(
-      clamp(c1.red + c2.red, 255),
-      clamp(c1.green + c2.green, 255),
-      clamp(c1.blue + c2.blue, 255)
+// Adds two RGB colours
+function addRgb(rgb1, rgb2) {
+  return new RGB(
+      clamp(rgb1.red + rgb2.red, 255),
+      clamp(rgb1.green + rgb2.green, 255),
+      clamp(rgb1.blue + rgb2.blue, 255)
   );
 }
 
-// Multiplies a colour
-function mult(c, num) {
-  return strip.Color(
-      clamp(Math.round(c.red * num), 255),
-      clamp(Math.round(c.green * num), 255),
-      clamp(Math.round(c.blue * num), 255)
+// dims a colour
+function dim(c, amount) {
+  return new HSL(
+      c.hue,
+      c.saturation,
+      clamp(c.luminosity * amount, 1)
   );
 }
 
@@ -87,23 +145,23 @@ function rand(min, max) {
 }
 
 function randomLight() {
+
   const light = LightSource(
       rand(0, COLS),
       rand(0, ROWS),
-      strip.Color(rand(0, 255), rand(0, 255), rand(0, 255)),
-      rand(0, 1),
+      new HSL(Math.random(), 1, Math.random()),
       pointLight
   );
-  light.dx = rand(-0.2, 0.2);
-  light.dy = rand(-0.2, 0.2);
+  light.dx = rand(-0.7, 0.7);
+  light.dy = rand(-0.7, 0.7);
   light.db = rand(-0.2, 0.2);
 
   return light;
 }
 
 function moveLight(light) {
-  light.brightness = clamp(light.brightness + light.db, 1);
-  if (light.brightness <= 0 || light.brightness >= 1) {
+  light.colour.luminosity = clamp(light.colour.luminosity + light.db, 1);
+  if (light.colour.luminosity <= 0 || light.colour.luminosity >= 1) {
     light.db *= -1;
   }
   light.x = clamp(light.x + light.dx, COLS);
@@ -116,8 +174,8 @@ function moveLight(light) {
   }
 }
 
-function LightSource(x, y, colour, brightness, lightFunc) {
-  return { x, y, colour, brightness, lightFunc, dx: 0, dy: 0, db: 0 };
+function LightSource(x, y, colour, lightFunc) {
+  return { x, y, colour, lightFunc, dx: 0, dy: 0, db: 0 };
 }
 
 function pointLight(lightsource, buffer) {
@@ -128,7 +186,7 @@ function pointLight(lightsource, buffer) {
       if (i < 0 || i >= strip.numPixels()) {
         continue;
       }
-      buffer[i] = add(buffer[i], mult(mult(lightsource.colour, lightsource.brightness), Math.pow(0.50, Math.abs(x) + Math.abs(y))));
+      buffer[i] = addRgb(buffer[i].toRGB(), dim(lightsource.colour, Math.pow(0.50, Math.abs(x) + Math.abs(y))).toRGB()).toHSL();
     }
   }
 }
