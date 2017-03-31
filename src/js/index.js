@@ -9,9 +9,7 @@ const COLS = 11;
 const FRAME_DELAY = 30;
 
 const strip = Neopixel.fromElement(document.querySelector('.custom-strip'));
-const lights = [];
-
-var currentColourBuffer;
+var lights = [];
 
 class HSL {
   constructor(hue, saturation, luminosity) {
@@ -30,43 +28,69 @@ class HSL {
   }
 }
 
+const Pattern = {
+  /*
+   * Blobby morphy colours
+   */
+  BLOBS: function() {
+    var lights = [];
+    for (var n = 0; n < 4; n++) {
+      lights.push(new LightSource(
+          rand(0, COLS), rand(0, ROWS),
+          new HSL(rand(0, 1), 1, rand(0, 1)),
+          0.6,
+          roundLight,
+          bounce
+      ));
+    }
+    return lights;
+  },
+
+  /*
+   * Scanning vertical bands of colour
+   */
+  BANDS: function() {
+    var lights = [];
+    for (var n = 0; n < 4; n++) {
+      lights.push(new LightSource(
+          rand(0, COLS), rand(0, ROWS),
+          new HSL(rand(0, 1), 1, 0.5), //rand(0, 1)),
+          0.3,
+          verticalLight,
+          scan
+      ));
+    }
+    return lights;
+  },
+
+  /*
+   * Lots of twinkly colours
+   */
+  TWINKLES: function() {
+    var lights = [];
+    for (var x = 0; x < COLS; x++) {
+      for (var y = 0; y < ROWS; y++) {
+        if ((x + y) % 2 == 0) {
+          lights.push(new LightSource(
+              x, y,
+              new HSL(rand(0, 1), 1, 0.4),
+              0.3,
+              roundLight,
+              twinkle
+          ));
+        }
+      }
+    }
+    return lights;
+  }
+};
+
 const arduino = new Arduino(
 
     // This function is run once when the arduino starts
     function begin() {
 
-      /** For wave-y patterns **/
-      for (var n = 0; n < 4; n++) {
-        //lights.push(new LightSource(
-        //    rand(0, COLS), rand(0, ROWS),
-        //    new HSL(rand(0, 1), 1, rand(0, 1)),
-        //    roundLight,
-        //    bounce
-        //));
-
-        lights.push(new LightSource(
-            rand(0, COLS), rand(0, ROWS),
-            new HSL(rand(0, 1), 1, 0.5), //rand(0, 1)),
-            verticalLight,
-            scan
-        ));
-      }
-
-      /** For twinkle lights **/
-      //for (var x = 0; x < COLS; x++) {
-      //  for (var y = 0; y < ROWS; y++) {
-      //    if ((x + y) % 2 == 0) {
-      //      lights.push(new LightSource(
-      //          x, y,
-      //          new HSL(rand(0, 1), 1, 0.4),
-      //          roundLight,
-      //          twinkle
-      //      ));
-      //    }
-      //  }
-      //}
-
-      currentColourBuffer = ColourBuffer(strip.numPixels());
+      lights = Pattern.BLOBS();
 
       strip.begin();
       strip.show();
@@ -144,65 +168,36 @@ function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-function randomLight(x, y, lightType, behaviour) {
-  return LightSource(
-      x,
-      y,
-      new HSL(Math.random(), 1, Math.random()),
-      lightType,
-      behaviour || function() {}
-  );
-}
-
-function setRandomPosition(light) {
-  light.x = rand(0, COLS);
-  light.y = rand(0, ROWS);
-  return light;
-}
-
 function moveLight(light) {
   light.colour.luminosity = clamp(light.colour.luminosity + light.db, 1);
-  if (light.colour.luminosity <= 0.3 || light.colour.luminosity >= 1) {
-    light.db *= -1;
-  }
   light.x = clamp(light.x + light.dx, COLS - 1);
-  if (light.x <= 0 || light.x >= COLS - 1) {
-    light.dx *= -1;
-  }
   light.y = clamp(light.y + light.dy, ROWS - 1);
-  if (light.y <= 0 || light.y >= ROWS - 1) {
-    light.dy *= -1;
-  }
 }
 
-function LightSource(x, y, colour, lightFunc, behaveFunc) {
-  return { x, y, colour, lightFunc, behaveFunc, dx: 0, dy: 0, db: 0 };
+function LightSource(x, y, colour, fade, lightFunc, behaveFunc) {
+  return { x, y, colour, fade, lightFunc, behaveFunc, dx: 0, dy: 0, db: 0 };
 }
 
 function roundLight(lightsource, buffer) {
-  const FADE = 0.3;
-
   for (var x = 0; x < COLS; x++) {
     for (var y = 0; y < ROWS; y++) {
       const i = index(x, y);
       if (i < 0 || i >= strip.numPixels()) {
         continue;
       }
-      buffer[i] = addRgb(buffer[i].toRGB(), dim(lightsource.colour, Math.pow(FADE, Math.abs(x - lightsource.x) + Math.abs(y - lightsource.y))).toRGB());
+      buffer[i] = addRgb(buffer[i].toRGB(), dim(lightsource.colour, Math.pow(lightsource.fade, Math.abs(x - lightsource.x) + Math.abs(y - lightsource.y))).toRGB());
     }
   }
 }
 
 function verticalLight(lightsource, buffer) {
-  const FADE = 0.3;
-
   for (var x = 0; x < COLS; x++) {
     for (var y = 0; y < ROWS; y++) {
       const i = index(x, y);
       if (i < 0 || i >= strip.numPixels()) {
         continue;
       }
-      buffer[i] = addRgb(buffer[i].toRGB(), dim(lightsource.colour, Math.pow(FADE, Math.abs(x - lightsource.x))).toRGB());
+      buffer[i] = addRgb(buffer[i].toRGB(), dim(lightsource.colour, Math.pow(lightsource.fade, Math.abs(x - lightsource.x))).toRGB());
     }
   }
 }
@@ -210,32 +205,34 @@ function verticalLight(lightsource, buffer) {
 function bounce(lightsource) {
   lightsource.dx = lightsource.dx || rand(0.005, 0.05) * (Math.random() > 0.5 ? -1 : 1);
   lightsource.dy = lightsource.dy || rand(0.005, 0.05) * (Math.random() > 0.5 ? -1 : 1);
-  lightsource.db = lightsource.db || rand(-0.01, 0.01);
-}
+  lightsource.db = lightsource.db || rand(0.001, 0.01) * (Math.random() > 0.5 ? -1 : 1);
 
-function wobble(lightsource) {
-  const WOBBLOCITY = 0.2;
-
-  lightsource.dx = lightsource.dx || rand(0.01, 0.1) * (Math.random() > 0.5 ? -1 : 1);
-  lightsource.db = lightsource.db || rand(-0.01, 0.01);
-
-  if (Math.random() <= WOBBLOCITY) {
+  if (lightsource.colour.luminosity <= 0.3 || lightsource.colour.luminosity >= 1) {
+    lightsource.db *= -1;
+  }
+  if (lightsource.x <= 0 || lightsource.x >= COLS - 1) {
     lightsource.dx *= -1;
+  }
+  if (lightsource.y <= 0 || lightsource.y >= ROWS - 1) {
+    lightsource.dy *= -1;
   }
 }
 
 function scan(lightsource) {
   lightsource.dx = lightsource.dx || rand(0.01, 0.1) * (Math.random() > 0.5 ? -1 : 1);
-  //lightsource.db = lightsource.db || rand(-0.01, 0.01);
+  if (lightsource.x <= 0 || lightsource.x >= COLS - 1) {
+    lightsource.dx *= -1;
+  }
 }
 
 function twinkle(lightsource) {
-  const TWINKLOCITY = 0.05;
-  if (lightsource.colour.luminosity <= 0.3) {
+  const TWINKLOCITY = 0.02;
+  if (lightsource.colour.luminosity <= 0) {
     lightsource.colour = new HSL(rand(0, 1), 1, 0.4);
+    lightsource.db = 0;
   } else if (lightsource.db == 0){
     if (Math.random() <= TWINKLOCITY) {
-      lightsource.db = -0.1;
+      lightsource.db = -0.03;
     }
   } else if (lightsource.db > 0 && lightsource.colour.luminosity > 0.5) {
     lightsource.db = 0;
