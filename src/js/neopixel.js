@@ -79,7 +79,8 @@ export default class Neopixel {
    * Updates the display colour of all pixsels in the strip
    */
   show() {
-    this[AMMETER].innerText = this[PIXELS].reduce((current, pixel) => current + pixel.updateColour(), 0);
+    this[AMMETER].innerText = Math.round(this[PIXELS]
+        .reduce((current, pixel) => current + pixel.updateColour(), 0));
   }
 
   /**
