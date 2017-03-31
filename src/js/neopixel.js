@@ -11,6 +11,7 @@ const IndexPattern = /p-(\d+)/;
 
 const PIXELS = Symbol();
 const STRIP = Symbol();
+const AMMETER = Symbol();
 export default class Neopixel {
 
   /**
@@ -25,6 +26,11 @@ export default class Neopixel {
     }
   }
 
+  /**
+   * Creates a Neopixel strip from a pre-created DOM element
+   * @param stripElement The element containing the pixels
+   * @returns {Neopixel}
+   */
   static fromElement(stripElement) {
     const strip = new Neopixel(0);
     strip[STRIP] = stripElement;
@@ -50,6 +56,10 @@ export default class Neopixel {
       });
       document.body.appendChild(strip);
     }
+
+    const ammeter = this[AMMETER] = document.createElement('div');
+    ammeter.className = 'ammeter';
+    this[STRIP].parentNode.insertBefore(ammeter, this[STRIP]);
   }
 
   /**
@@ -69,7 +79,7 @@ export default class Neopixel {
    * Updates the display colour of all pixsels in the strip
    */
   show() {
-    this[PIXELS].forEach(p => p.updateColour());
+    this[AMMETER].innerText = this[PIXELS].reduce((current, pixel) => current + pixel.updateColour(), 0);
   }
 
   /**
@@ -118,6 +128,9 @@ class Pixel {
 
   updateColour() {
     this.element.style.background = `rgb(${this.colour.red}, ${this.colour.green}, ${this.colour.blue})`;
+
+    // Estimate the current drawn by this pixel
+    return ((this.colour.red + this.colour.blue + this.colour.green) / (255 * 3)) * 60;
   }
 
 }
