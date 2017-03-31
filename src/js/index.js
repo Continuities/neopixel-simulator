@@ -82,6 +82,33 @@ const Pattern = {
       }
     }
     return lights;
+  },
+
+  /*
+   * Kill all humans.
+   */
+  CYLON: function() {
+    const speed = 0.2;
+    var lights = [], l;
+    l = new LightSource(
+        0, 0,
+        HSL.fromRGB(255, 0, 0),
+        0.4,
+        verticalLight,
+        scan
+    );
+    l.dx = speed;
+    lights.push(l);
+    l = new LightSource(
+        COLS - 1, 0,
+        HSL.fromRGB(255, 0, 0),
+        0.4,
+        verticalLight,
+        scan
+    );
+    l.dx = -speed;
+    lights.push(l);
+    return lights;
   }
 };
 
@@ -90,7 +117,10 @@ const arduino = new Arduino(
     // This function is run once when the arduino starts
     function begin() {
 
+      //lights = Pattern.CYLON();
       lights = Pattern.BLOBS();
+      //lights = Pattern.BANDS();
+      //lights = Pattern.TWINKLES();
 
       strip.begin();
       strip.show();
