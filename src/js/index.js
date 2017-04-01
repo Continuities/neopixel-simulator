@@ -92,7 +92,7 @@ const Pattern = {
     var lights = [], l;
     l = new LightSource(
         0, 0,
-        HSL.fromRGB(255, 0, 0),
+        HSL.fromRGB(255, 100, 100),
         0.4,
         verticalLight,
         scan
@@ -101,7 +101,7 @@ const Pattern = {
     lights.push(l);
     l = new LightSource(
         COLS - 1, 0,
-        HSL.fromRGB(255, 0, 0),
+        HSL.fromRGB(255, 100, 100),
         0.4,
         verticalLight,
         scan
@@ -109,7 +109,52 @@ const Pattern = {
     l.dx = -speed;
     lights.push(l);
     return lights;
+  },
+
+  /*
+   * Whoa.
+   */
+  MATRIX: function() {
+    var lights = [];
+    for (var i = 0; i < 15; i++) {
+      lights.push(new LightSource(
+          rand(0, COLS - 1), rand(-2, ROWS + 1),
+          HSL.fromRGB(100, 255, 100),
+          0.2,
+          roundLight,
+          rain
+      ));
+    }
+    return lights;
+  },
+
+  /*
+   * Fwoosh!
+   */
+  FIRE: function() {
+    var lights = [];
+    for (var i = 0; i < 10; i++) {
+      lights.push(new LightSource(
+          rand(0, COLS - 1), rand(-2, ROWS + 1),
+          HSL.fromRGB(255, rand(0, 200), 0),
+          0.35,
+          roundLight,
+          smoke
+      ));
+    }
+    return lights;
+  },
+
+  FIREWORKS: function() {
+    return [new LightSource(
+      5, 1,
+      new HSL(rand(0, 1), 1, 0.5),
+      0,
+      roundLight,
+      explode
+    )];
   }
+
 };
 
 const arduino = new Arduino(
@@ -117,10 +162,13 @@ const arduino = new Arduino(
     // This function is run once when the arduino starts
     function begin() {
 
-      //lights = Pattern.CYLON();
       lights = Pattern.BLOBS();
       //lights = Pattern.BANDS();
       //lights = Pattern.TWINKLES();
+      //lights = Pattern.CYLON();
+      //lights = Pattern.MATRIX();
+      //lights = Pattern.FIRE();
+      //lights = Pattern.FIREWORKS();
 
       strip.begin();
       strip.show();
@@ -200,8 +248,10 @@ function rand(min, max) {
 
 function moveLight(light) {
   light.colour.luminosity = clamp(light.colour.luminosity + light.db, 1);
-  light.x = clamp(light.x + light.dx, COLS - 1);
-  light.y = clamp(light.y + light.dy, ROWS - 1);
+  //light.x = clamp(light.x + light.dx, COLS - 1);
+  //light.y = clamp(light.y + light.dy, ROWS - 1);
+  light.x += light.dx;
+  light.y += light.dy;
 }
 
 function LightSource(x, y, colour, fade, lightFunc, behaveFunc) {
@@ -266,6 +316,44 @@ function twinkle(lightsource) {
     }
   } else if (lightsource.db > 0 && lightsource.colour.luminosity > 0.5) {
     lightsource.db = 0;
+  }
+}
+
+function rain(l) {
+  l.dy = l.dy || rand(0.05, 0.2);
+  l.dx = 0;
+  if (l.y > ROWS + 2) {
+    l.y = -2;
+    l.x = rand(0, COLS - 1);
+    l.dy = rand(0.05, 0.2);
+  }
+}
+
+function smoke(l) {
+  const WIGGLE = 0.2;
+  l.dy = l.dy || rand(-0.1, -0.2);
+  l.dx = l.dx || rand(-0.1, 0.1);
+  if (l.y < -1) {
+    l.y = ROWS + 1;
+    l.x = rand(0, COLS - 1);
+    l.dy = rand(-0.1, -0.2);
+  }
+  if (Math.random() < WIGGLE) {
+    l.dx *= -1;
+  }
+}
+
+function explode(l) {
+  // TODO: Keep working on this. Why does the diffuse light get BRIGHTER as the core fades?
+  l.fade += 0.02;
+  if (l.fade >= 1 && l.db == 0) {
+    l.fade = 0.9;
+    l.db = -0.01;
+  }
+  if (l.colour.luminosity <= 0) {
+    l.fade = 0;
+    l.db = 0;
+    l.colour.luminosity = 0.5;
   }
 }
 
