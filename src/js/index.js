@@ -10,6 +10,7 @@ const FRAME_DELAY = 30;
 
 const strip = Neopixel.fromElement(document.querySelector('.custom-strip'));
 var lights = [];
+var last_frame;
 
 class HSL {
   constructor(hue, saturation, luminosity) {
@@ -146,13 +147,17 @@ const Pattern = {
   },
 
   FIREWORKS: function() {
-    return [new LightSource(
-      5, 1,
-      new HSL(rand(0, 1), 1, 0.5),
-      0,
-      roundLight,
-      explode
-    )];
+    var lights = [];
+    for (var i = 0; i < 3; i++) {
+      lights.push(new LightSource(
+          Math.round(rand(0, COLS - 1)), Math.round(rand(0, ROWS - 1)),
+          new HSL(rand(0, 1), 1, 0),
+          0,
+          roundLight,
+          explode
+      ))
+    }
+    return lights;
   }
 
 };
@@ -162,13 +167,15 @@ const arduino = new Arduino(
     // This function is run once when the arduino starts
     function begin() {
 
-      lights = Pattern.BLOBS();
+      //lights = Pattern.BLOBS();
       //lights = Pattern.BANDS();
       //lights = Pattern.TWINKLES();
       //lights = Pattern.CYLON();
       //lights = Pattern.MATRIX();
       //lights = Pattern.FIRE();
-      //lights = Pattern.FIREWORKS();
+      lights = Pattern.FIREWORKS();
+
+      last_frame = Date.now();
 
       strip.begin();
       strip.show();
@@ -178,6 +185,10 @@ const arduino = new Arduino(
     // Use the delay function to prevent it from burning cycles
     // like crazy
     async function loop() {
+
+      if (Date.now() - last_frame < FRAME_DELAY) {
+        return;
+      }
 
       // Calculate the lighting for the next frame
       const colours = ColourBuffer(strip.numPixels());
@@ -196,7 +207,8 @@ const arduino = new Arduino(
       strip.show();
 
       // Pause before the next frame
-      await arduino.delay(FRAME_DELAY);
+      //await arduino.delay(FRAME_DELAY);
+      last_frame = Date.now();
     }
 );
 
@@ -248,8 +260,6 @@ function rand(min, max) {
 
 function moveLight(light) {
   light.colour.luminosity = clamp(light.colour.luminosity + light.db, 1);
-  //light.x = clamp(light.x + light.dx, COLS - 1);
-  //light.y = clamp(light.y + light.dy, ROWS - 1);
   light.x += light.dx;
   light.y += light.dy;
 }
@@ -344,17 +354,21 @@ function smoke(l) {
 }
 
 function explode(l) {
-  // TODO: Keep working on this. Why does the diffuse light get BRIGHTER as the core fades?
-  l.fade += 0.02;
-  if (l.fade >= 1 && l.db == 0) {
-    l.fade = 0.9;
-    l.db = -0.01;
-  }
-  if (l.colour.luminosity <= 0) {
+  const VOLATILITY = 0.01;
+  l.db = -0.01;
+  const animProgress = 1 - l.colour.luminosity;
+  l.fade = easeOutCirc(animProgress, 0, 1, 1) * 0.75;
+  if (l.colour.luminosity <= 0 && Math.random() < VOLATILITY) {
     l.fade = 0;
-    l.db = 0;
-    l.colour.luminosity = 0.5;
+    l.colour = new HSL(rand(0, 1), 1, 1);
+    l.x = Math.round(rand(0, COLS - 1));
+    l.y = Math.round(rand(0, ROWS - 1));
   }
+}
+
+// t: current time, b: begInnIng value, c: change In value, d: duration
+function easeOutCirc(t, b, c, d) {
+  return c * Math.sqrt(1 - (t=t/d-1)*t) + b;
 }
 
 arduino.start();
