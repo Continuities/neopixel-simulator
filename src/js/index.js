@@ -31,6 +31,20 @@ class HSL {
 
 const Pattern = {
   /*
+   * TESTING
+   */
+  TEST: function() {
+    return [
+        new LightSource(
+            5, 1,
+            HSL.fromRGB(255, 255, 255),
+            0.2,
+            roundLight,
+            stationary
+        )
+    ]
+  },
+  /*
    * Blobby morphy colours
    */
   BLOBS: function() {
@@ -146,6 +160,9 @@ const Pattern = {
     return lights;
   },
 
+  /*
+   * Kapow! Ooooooh.
+   */
   FIREWORKS: function() {
     var lights = [];
     for (var i = 0; i < 3; i++) {
@@ -158,6 +175,21 @@ const Pattern = {
       ))
     }
     return lights;
+  },
+
+  /*
+   * Bloooooooop
+   */
+  BEACON: function() {
+    return [
+      new LightSource(
+        5, 1,
+        new HSL(rand(0, 1), 1, 0),
+        0,
+        horizontalLight,
+        pulse
+      )
+    ];
   }
 
 };
@@ -167,13 +199,15 @@ const arduino = new Arduino(
     // This function is run once when the arduino starts
     function begin() {
 
+      //lights = Pattern.TEST();
       //lights = Pattern.BLOBS();
       //lights = Pattern.BANDS();
       //lights = Pattern.TWINKLES();
       //lights = Pattern.CYLON();
       //lights = Pattern.MATRIX();
       //lights = Pattern.FIRE();
-      lights = Pattern.FIREWORKS();
+      //lights = Pattern.FIREWORKS();
+      lights = Pattern.BEACON();
 
       last_frame = Date.now();
 
@@ -181,9 +215,7 @@ const arduino = new Arduino(
       strip.show();
     },
 
-    // This function is run continuously
-    // Use the delay function to prevent it from burning cycles
-    // like crazy
+    // This function is run continuously like crazy
     async function loop() {
 
       if (Date.now() - last_frame < FRAME_DELAY) {
@@ -206,8 +238,6 @@ const arduino = new Arduino(
       }
       strip.show();
 
-      // Pause before the next frame
-      //await arduino.delay(FRAME_DELAY);
       last_frame = Date.now();
     }
 );
@@ -292,6 +322,22 @@ function verticalLight(lightsource, buffer) {
   }
 }
 
+function horizontalLight(lightsource, buffer) {
+  for (var x = 0; x < COLS; x++) {
+    for (var y = 0; y < ROWS; y++) {
+      const i = index(x, y);
+      if (i < 0 || i >= strip.numPixels()) {
+        continue;
+      }
+      buffer[i] = addRgb(buffer[i].toRGB(), dim(lightsource.colour, Math.pow(lightsource.fade, Math.abs(y - lightsource.y))).toRGB());
+    }
+  }
+}
+
+function stationary(l) {
+  l.dx = l.dy = l.db = 0;
+}
+
 function bounce(lightsource) {
   lightsource.dx = lightsource.dx || rand(0.005, 0.05) * (Math.random() > 0.5 ? -1 : 1);
   lightsource.dy = lightsource.dy || rand(0.005, 0.05) * (Math.random() > 0.5 ? -1 : 1);
@@ -354,15 +400,26 @@ function smoke(l) {
 }
 
 function explode(l) {
-  const VOLATILITY = 0.01;
+  const VOLATILITY = 0.02;
   l.db = -0.01;
   const animProgress = 1 - l.colour.luminosity;
   l.fade = easeOutCirc(animProgress, 0, 1, 1) * 0.75;
   if (l.colour.luminosity <= 0 && Math.random() < VOLATILITY) {
     l.fade = 0;
+    l.colour.luminosity = 1;
     l.colour = new HSL(rand(0, 1), 1, 1);
     l.x = Math.round(rand(0, COLS - 1));
     l.y = Math.round(rand(0, ROWS - 1));
+  }
+}
+
+function pulse(l) {
+  l.db = -0.02;
+  const animProgress = 1 - l.colour.luminosity;
+  l.fade = easeOutCirc(animProgress, 0, 1, 1) * 0.75;
+  if (l.colour.luminosity <= 0) {
+    l.fade = 0;
+    l.colour.luminosity = 1;
   }
 }
 
