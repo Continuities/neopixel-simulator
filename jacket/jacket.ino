@@ -1,6 +1,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <Math.h>
 #define PIN 10
+#define BUTTON_PIN 6
 #define ROWS 3
 #define COLS 11
 #define FRAME_DELAY 33
@@ -10,6 +11,7 @@
 #define TWINKLOCITY 0.02
 #define WISPINESS 0.2
 #define VOLATILITY 0.02
+#define DENSITY 20
 #define SHOW_FPS true
 
 typedef struct {
@@ -26,10 +28,10 @@ typedef struct {
 
 typedef struct lightsource lightsource;
 struct lightsource {
-  double x;
-  double y;
-  double dx;
-  double dy;
+  float x;
+  float y;
+  float dx;
+  float dy;
   double db;
   hsv colour;
   double fade;
@@ -42,18 +44,24 @@ static rgb   hsv2rgb(hsv in);
 static hsv   addColours(hsv c1, hsv c2);
 static rgb   dim(rgb c, float amount);
 
+//Adafruit_NeoPixel onboard = Adafruit_NeoPixel(1, 8, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(ROWS * COLS, PIN, NEO_GRB + NEO_KHZ800);
 unsigned long lastFrame;
 rgb colourBuffer[ROWS * COLS] = { {0.0, 0.0, 0.0} };
 lightsource lights[MAX_LIGHTS];
 int numLights = 0;
 
-float acc = 0;
+int acc = 0;
 
 void setup() {
   randomSeed(analogRead(9));
 
+  //setup input
+  pinMode(BUTTON_PIN, INPUT);
+  digitalWrite(BUTTON_PIN, HIGH);
+
   // Choose a pattern
+//    numLights = testlight(lights);
   numLights = blobs(lights);
 //  numLights = matrix(lights);
 //  numLights = fire(lights);
@@ -61,14 +69,25 @@ void setup() {
 //  numLights = bands(lights);
 //  numLights = fireworks(lights);
 //  numLights = beacon(lights);
-//  numLights = testlight(lights);
 
   lastFrame = millis();
+//  onboard.begin();
   strip.begin();
+//  onboard.show();
   strip.show();
 }
 
 void loop() {
+
+  // Test the input button
+//  if (digitalRead(BUTTON_PIN) == LOW) {
+//    onboard.setPixelColor(0, onboard.Color(0, 0, 255));
+//  }
+//  else {
+//    onboard.setPixelColor(0, onboard.Color(0, 0, 0));
+//  }
+//  onboard.show();
+  
   if (millis() - lastFrame < FRAME_DELAY) {
     return;
   }

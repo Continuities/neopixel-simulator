@@ -108,7 +108,7 @@ rgb dim(rgb c, float amount) {
   };
 }
 
-rgb multColour(rgb c, float amount) {
+rgb multColour(rgb c, double amount) {
   return {
     c.r * amount,
     c.g * amount,
@@ -116,8 +116,18 @@ rgb multColour(rgb c, float amount) {
   };
 }
 
+rgb divColour(rgb c, double amount) {
+  if (amount == 0) return c;
+  return {
+    c.r / amount,
+    c.g / amount,
+    c.b / amount
+  };
+}
+
 // Adds two RGB colours
 rgb addColours(rgb c1, rgb c2) {
+  return c2;
   return {
     clamp(c1.r + c2.r, 1),
     clamp(c1.g + c2.g, 1),

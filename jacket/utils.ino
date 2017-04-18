@@ -36,13 +36,49 @@ static void printRGB(rgb colour) {
   Serial.print(" }");
 }
 
-static double asymp(double x, int a) {
-  // Higher powers are slow, so this is actually faster
-  double b = x + 1;
-  for (int i = 0; i < a; i++) {
-    b *= (x + 1);
+static double asymp(int x, int a) {
+  return 1 / expo(x, a);
+}
+
+unsigned long expo(int a, int b) {
+  if (b==1)
+    return a;
+  if (b==2)
+    return square(a);
+
+  if (b%2==0){
+    return expo(expo(a,b/2),2);
   }
-  return 1 / b;
+  else{
+    return a*expo(expo(a,(b-1)/2),2);
+  }
+}
+
+void printDouble( double val, byte precision){
+ // prints val with number of decimal places determine by precision
+ // precision is a number from 0 to 6 indicating the desired decimial places
+ // example: printDouble( 3.1415, 2); // prints 3.14 (two decimal places)
+
+ Serial.print (int(val));  //prints the int part
+ if( precision > 0) {
+   Serial.print("."); // print the decimal point
+   unsigned long frac;
+   unsigned long mult = 1;
+   byte padding = precision -1;
+   while(precision--)
+      mult *=10;
+      
+   if(val >= 0)
+     frac = (val - int(val)) * mult;
+   else
+     frac = (int(val)- val ) * mult;
+   unsigned long frac1 = frac;
+   while( frac1 /= 10 )
+     padding--;
+   while(  padding--)
+     Serial.print("0");
+   Serial.print(frac,DEC) ;
+ }
 }
 
 
