@@ -1,7 +1,10 @@
 #include <Adafruit_NeoPixel.h>
 #include <Math.h>
-#define PIN 10
-#define ROWS 3
+#define BACK_PIN 10
+#define COLLAR_PIN 9
+#define BUTTON_PIN 6
+#define BACK_ROWS 3
+#define COLLAR_ROWS 2
 #define COLS 11
 #define FRAME_DELAY 33
 #define MAX_LIGHTS 20
@@ -10,7 +13,12 @@
 #define TWINKLOCITY 0.02
 #define WISPINESS 0.2
 #define VOLATILITY 0.02
-#define SHOW_FPS true
+#define SHOW_FPS false
+#define DEBUG_INPUT false
+#define LONG_PRESS 700
+#define NUM_THEMES 3
+#define NUM_PATTERNS 7
+#define AUTO_ROTATE 45000
 
 typedef struct {
   double r;       // a fraction between 0 and 1
@@ -37,38 +45,84 @@ struct lightsource {
   void (*behaviourFunc)(lightsource *);
 };
 
+typedef int (*Pattern)(lightsource *lights);
+typedef hsv (*Theme)(bool wantRandom);
+
 static hsv   rgb2hsv(rgb in);
 static rgb   hsv2rgb(hsv in);
 static hsv   addColours(hsv c1, hsv c2);
 static rgb   dim(rgb c, float amount);
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(ROWS * COLS, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel back_strip = Adafruit_NeoPixel(BACK_ROWS * COLS, BACK_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel collar_strip = Adafruit_NeoPixel(COLLAR_ROWS * COLS, COLLAR_PIN, NEO_GRB + NEO_KHZ800);
 unsigned long lastFrame;
-rgb colourBuffer[ROWS * COLS] = { {0.0, 0.0, 0.0} };
+rgb backBuffer[BACK_ROWS * COLS] = { {0.0, 0.0, 0.0} };
+rgb collarBuffer[COLLAR_ROWS * COLS] = { {0.0, 0.0, 0.0} };
 lightsource lights[MAX_LIGHTS];
 int numLights = 0;
+unsigned long buttonDown = 0;
+unsigned long lastRotate = 0;
+bool switchingTheme = false;
 
 float acc = 0;
+
+void initScene() {
+  numLights = getCurrentPattern()(lights);
+}
 
 void setup() {
   randomSeed(analogRead(9));
 
-  // Choose a pattern
-  numLights = blobs(lights);
-//  numLights = matrix(lights);
-//  numLights = fire(lights);
-//  numLights = cylon(lights);
-//  numLights = bands(lights);
-//  numLights = fireworks(lights);
-//  numLights = beacon(lights);
-//  numLights = testlight(lights);
+  pinMode(BUTTON_PIN, INPUT);
+  digitalWrite(BUTTON_PIN, HIGH);
+
+  initScene();
 
   lastFrame = millis();
-  strip.begin();
-  strip.show();
+  back_strip.begin();
+  collar_strip.begin();
+  back_strip.show();
+  collar_strip.show();
 }
 
 void loop() {
+
+  // Accept input
+  if (digitalRead(BUTTON_PIN) == LOW) {
+    if (DEBUG_INPUT) {
+      Serial.print("DOWN :: "); Serial.print(buttonDown); Serial.print(" :: ");Serial.print(millis()); Serial.print("\n");
+    }
+    if (buttonDown == 0) {
+      buttonDown = millis();
+      if (DEBUG_INPUT) {
+        Serial.print("====== SET ======\n");
+      }
+    } else if(millis() - buttonDown >= LONG_PRESS) {
+      if (DEBUG_INPUT) {
+        Serial.print("======= LONG =====\n");
+      }
+      changeTheme();
+      buttonDown = 0;
+      switchingTheme = true;
+    }
+  } else if(buttonDown > 0) {
+    if (DEBUG_INPUT) {
+      Serial.print("======= SHORT =====\n");
+    }
+    if (!switchingTheme) {
+      changePattern(false);
+      lastRotate = millis();
+    }
+    switchingTheme = false;
+    buttonDown = 0;
+  }
+
+  // Auto-rotate patterns
+  if (millis() - lastRotate > AUTO_ROTATE) {
+    changePattern(true);
+    lastRotate = millis();
+  }
+  
   if (millis() - lastFrame < FRAME_DELAY) {
     return;
   }
@@ -81,8 +135,11 @@ void loop() {
   lastFrame = millis();
 
   // Calculate the lighting for the next frame
-  for (int i = 0; i < ROWS*COLS; i++) {
-    colourBuffer[i] = {0, 0, 0}; 
+  for (int i = 0; i < BACK_ROWS*COLS; i++) {
+    backBuffer[i] = {0, 0, 0}; 
+  }
+  for (int i = 0; i < COLLAR_ROWS*COLS; i++) {
+    collarBuffer[i] = {0, 0, 0};
   }
   for (int l = 0; l < numLights; l++) {
     lightsource light = lights[l];
@@ -95,11 +152,15 @@ void loop() {
   }
 
   // Light the pixels
-  for (int i = 0; i < ROWS * COLS; i++) {
-    rgb colour = colourBuffer[i];
-    strip.setPixelColor(i, strip.Color(colour.r * 255, colour.g * 255, colour.b * 255));
-   
+  for (int i = 0; i < BACK_ROWS * COLS; i++) {
+    rgb colour = backBuffer[i];
+    back_strip.setPixelColor(i, back_strip.Color(colour.r * 255, colour.g * 255, colour.b * 255));
   }
-  strip.show();
+  for (int i = 0; i < COLLAR_ROWS * COLS; i++) {
+    rgb colour = collarBuffer[i];
+    collar_strip.setPixelColor(i, collar_strip.Color(colour.r * 255, colour.g * 255, colour.b * 255));
+  }
+  back_strip.show();
+  collar_strip.show();
 }
 

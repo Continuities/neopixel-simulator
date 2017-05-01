@@ -5,7 +5,7 @@ static int index(double x, double y) {
 
 // Transforms a cartesian coordinate into a pixel index
 static int index(int x, int y) {
-  if (x < 0 || x >= COLS || y < 0 || y >= ROWS) {
+  if (x < 0 || x >= COLS || y < 0 || y >= BACK_ROWS) {
     return -1;
   }
   return (x * 3) + (x % 2 > 0 ? 2 - y : y);

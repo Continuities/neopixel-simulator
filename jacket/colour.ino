@@ -124,3 +124,21 @@ rgb addColours(rgb c1, rgb c2) {
     clamp(c1.b + c2.b, 1)
   };
 }
+
+void addToBuffer(int x, int y, rgb colour) {
+
+  // TEMP
+  y += COLLAR_ROWS;
+  
+  if (y < COLLAR_ROWS) {
+    // Write to the collar strip
+    
+  }
+  else {
+    // Write to the back strip
+    int i = index(x, y - COLLAR_ROWS);
+    if (i < 0 || i >= back_strip.numPixels()) return; 
+    backBuffer[i] = addColours(backBuffer[i], colour);
+  }
+}
+
