@@ -13,7 +13,7 @@
 #define TWINKLOCITY 0.02
 #define WISPINESS 0.2
 #define VOLATILITY 0.02
-#define SHOW_FPS false
+#define SHOW_FPS true
 #define DEBUG_INPUT false
 #define LONG_PRESS 700
 #define NUM_THEMES 3

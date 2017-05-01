@@ -2,10 +2,10 @@ static int testlight(lightsource *lights) {
   lights[0] = {
     5, 1,
     0, 0, 0,
-    rgb2hsv({1, 0, 0}),
+    rgb2hsv({1, 1, 1}),
     5,
     roundLight,
-    bounce
+    stationary
   };
   return 1;
 }
@@ -14,7 +14,7 @@ static int blobs(lightsource *lights) {
   for (int n = 0; n < NUM_BLOBS; n++) {
     lights[n] = {
       random(0, COLS),
-      random(0, BACK_ROWS),
+      random(0, rows()),
       0,
       0,
       0,
@@ -47,7 +47,7 @@ static int bands(lightsource *lights) {
 static int matrix(lightsource *lights) {
   for (int n = 0; n < 5; n++) {
     lights[n] = {
-      random(0, COLS), random(-2, BACK_ROWS + 1),
+      random(0, COLS), random(-2, rows() + 1),
       0, 0, 0,
       getCurrentTheme()(false),
       3,
@@ -61,7 +61,7 @@ static int matrix(lightsource *lights) {
 static int fire(lightsource *lights) {
     for (int n = 0; n < 5; n++) {
     lights[n] = {
-      random(0, COLS), random(-2, BACK_ROWS + 1),
+      random(0, COLS), random(-2, rows() + 1),
       0, 0, 0,
       getCurrentTheme()(true),
       3,
@@ -95,7 +95,7 @@ static int cylon(lightsource *lights) {
 static int fireworks(lightsource *lights) {
   for (int n = 0; n < NUM_FIREWORKS; n++) {
     lights[n] = {
-      random(0, COLS - 1), random(0, BACK_ROWS - 1),
+      random(0, COLS - 1), random(0, rows() - 1),
       0, 0, 0,
       getCurrentTheme()(true),
       6,

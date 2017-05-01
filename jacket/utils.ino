@@ -1,14 +1,30 @@
-// Transforms a cartesian coordinate into a pixel index
-static int index(double x, double y) {
-  return index((int)round(x), (int)round(y));
+// Transforms a cartesian coordinate into a pixel index on the back strip
+static int backIndex(double x, double y) {
+  return backIndex((int)round(x), (int)round(y));
 }
 
-// Transforms a cartesian coordinate into a pixel index
-static int index(int x, int y) {
+// Transforms a cartesian coordinate into a pixel index on the back strip
+static int backIndex(int x, int y) {
   if (x < 0 || x >= COLS || y < 0 || y >= BACK_ROWS) {
     return -1;
   }
   return (x * 3) + (x % 2 > 0 ? 2 - y : y);
+}
+
+// Transforms a cartesian coordinate into a pixel index on the back strip
+static int collarIndex(double x, double y) {
+  return collarIndex((int)round(x), (int)round(y));
+}
+
+static int collarIndex(int x, int y) {
+  if (x < 0 || x >= COLS || y < 0 || y >= COLLAR_ROWS) {
+    return -1;
+  }
+  return (x * 2) + (x % 2 == 0 ? 1 - y : y);
+}
+
+static int rows() {
+  return BACK_ROWS + COLLAR_ROWS;
 }
 
 // Clamps a float betweeen min and max
@@ -43,6 +59,22 @@ static double asymp(double x, int a) {
     b *= (x + 1);
   }
   return 1 / b;
+}
+
+void addToBuffer(int x, int y, rgb colour) {
+
+  if (y < COLLAR_ROWS) {
+    // Write to the collar strip
+    int i = collarIndex(x, y);
+    if (i < 0 || i >= collar_strip.numPixels()) return; 
+    collarBuffer[i] = addColours(collarBuffer[i], colour);
+  }
+  else {
+    // Write to the back strip
+    int i = backIndex(x, y - COLLAR_ROWS);
+    if (i < 0 || i >= back_strip.numPixels()) return; 
+    backBuffer[i] = addColours(backBuffer[i], colour);
+  }
 }
 
 

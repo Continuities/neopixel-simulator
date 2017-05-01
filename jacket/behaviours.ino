@@ -16,8 +16,8 @@ static void bounce(lightsource *light) {
     light->x = clamp(light->x, COLS - 1);
     light->dx *= -1;
   }
-  if (light->y <= 0 || light->y >= BACK_ROWS - 1) {
-    light->y = clamp(light->y, BACK_ROWS - 1);
+  if (light->y <= 0 || light->y >= rows() - 1) {
+    light->y = clamp(light->y, rows() - 1);
     light->dy *= -1;
   }
 }
@@ -46,7 +46,7 @@ static void twinkle(lightsource *light) {
 
 static void rain(lightsource *light) {
   if (light->dy == 0) light->dy = randomDouble(0.05, 0.2);
-  if (light->y > BACK_ROWS + 2) {
+  if (light->y > rows() + 2) {
     light->y = -2;
     light->x = randomDouble(0, COLS -1);
     light->dy = randomDouble(0.05, 0.2);
@@ -57,7 +57,7 @@ static void smoke(lightsource *light) {
   if (light->dx == 0) light->dx = randomDouble(-0.1, 0.1);
   if (light->dy == 0) light->dy = randomDouble(-0.1, -0.2);
   if (light->y < -1) {
-    light->y = BACK_ROWS + 1;
+    light->y = rows() + 1;
     light->x = randomDouble(0, COLS - 1);
     light->dy = randomDouble(-0.1, -0.2);
   }
@@ -74,7 +74,7 @@ static void explode(lightsource *light) {
     light->colour = getCurrentTheme()(true);
     light->colour.v = 1;
     light->x = random(0, COLS - 1);
-    light->y = random(0, BACK_ROWS - 1);
+    light->y = random(0, rows() - 1);
   }
 }
 
