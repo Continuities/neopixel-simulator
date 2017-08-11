@@ -19,6 +19,7 @@
 #define NUM_THEMES 3
 #define NUM_PATTERNS 7
 #define AUTO_ROTATE 45000
+#define DOUBLECLICK_WINDOW 200
 
 typedef struct {
   double r;       // a fraction between 0 and 1
@@ -61,8 +62,10 @@ rgb collarBuffer[COLLAR_ROWS * COLS] = { {0.0, 0.0, 0.0} };
 lightsource lights[MAX_LIGHTS];
 int numLights = 0;
 unsigned long buttonDown = 0;
+unsigned long lastPress = 0;
 unsigned long lastRotate = 0;
 bool switchingTheme = false;
+int brightness = 255;
 
 float acc = 0;
 
@@ -85,6 +88,10 @@ void setup() {
   collar_strip.show();
 }
 
+void handleShort() {
+  
+}
+
 void loop() {
 
   // Accept input
@@ -103,18 +110,34 @@ void loop() {
       }
       changeTheme();
       buttonDown = 0;
+      lastPress = 0;
       switchingTheme = true;
     }
-  } else if(buttonDown > 0) {
+  }
+  else if (buttonDown > 0) {
     if (DEBUG_INPUT) {
       Serial.print("======= SHORT =====\n");
     }
+    
+    if (!switchingTheme && lastPress == 0) {
+      // First press. Wait to see if we get a double-click.
+      lastPress = millis();  
+    }
+    else if(!switchingTheme) {
+      // Second click. Change brightness.
+      brightness = brightness == 255 ? 127 : 255;
+    }
+    
+    switchingTheme = false;
+    buttonDown = 0;
+  } 
+  else if (lastPress > 0 && millis() - lastPress > DOUBLECLICK_WINDOW) {
+    // Just a single click
+    lastPress = 0;
     if (!switchingTheme) {
       changePattern(false);
       lastRotate = millis();
     }
-    switchingTheme = false;
-    buttonDown = 0;
   }
 
   // Auto-rotate patterns
@@ -154,11 +177,11 @@ void loop() {
   // Light the pixels
   for (int i = 0; i < BACK_ROWS * COLS; i++) {
     rgb colour = backBuffer[i];
-    back_strip.setPixelColor(i, back_strip.Color(colour.r * 255, colour.g * 255, colour.b * 255));
+    back_strip.setPixelColor(i, back_strip.Color(colour.r * brightness, colour.g * brightness, colour.b * brightness));
   }
   for (int i = 0; i < COLLAR_ROWS * COLS; i++) {
     rgb colour = collarBuffer[i];
-    collar_strip.setPixelColor(i, collar_strip.Color(colour.r * 255, colour.g * 255, colour.b * 255));
+    collar_strip.setPixelColor(i, collar_strip.Color(colour.r * brightness, colour.g * brightness, colour.b * brightness));
   }
   back_strip.show();
   collar_strip.show();

@@ -29,7 +29,7 @@ static int currentTheme = random(0, NUM_THEMES);
 Theme getCurrentTheme() {
   return THEMES[currentTheme];
 }
-int changeTheme() {
+void changeTheme() {
   if (++currentTheme >= NUM_THEMES) {
     currentTheme = 0;
   }

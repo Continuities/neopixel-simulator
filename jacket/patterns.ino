@@ -125,7 +125,7 @@ int currentPattern = random(0, NUM_PATTERNS);
 Pattern getCurrentPattern() {
   return PATTERNS[currentPattern];
 }
-static int changePattern(bool wantRandom) {
+static void changePattern(bool wantRandom) {
   if (wantRandom) {
     currentPattern = random(0, NUM_PATTERNS);
   }
